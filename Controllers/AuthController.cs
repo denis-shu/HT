@@ -17,10 +17,10 @@ namespace DatingApp.API.Controllers
     {
         private readonly IAuthRepositoty _repo;
         private readonly IConfiguration _config;
-        public AuthController(IAuthRepositoty repo,  IConfiguration config)
+        public AuthController(IAuthRepositoty repo, IConfiguration config)
         {
             _repo = repo;
-            _config= config;
+            _config = config;
         }
 
         [HttpPost("register")]
@@ -48,6 +48,8 @@ namespace DatingApp.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody]UserForLoginDto dto)
         {
+
+            
             var userFromrepo = await _repo.Login(dto.Username, dto.Password);
 
             if (userFromrepo == null)
@@ -61,7 +63,7 @@ namespace DatingApp.API.Controllers
                 Subject = new ClaimsIdentity(new Claim[]{
                     new Claim(ClaimTypes.NameIdentifier, userFromrepo.Id.ToString()),
                     new Claim(ClaimTypes.Name, userFromrepo.Username)
-                }),                
+                }),
                 Expires = DateTime.Now.AddDays(1),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature)
             };
@@ -70,6 +72,7 @@ namespace DatingApp.API.Controllers
             var tokenString = tokenHandler.WriteToken(token);
 
             return Ok(new { tokenString });
+
         }
     }
 }
