@@ -36,7 +36,8 @@ namespace DatingApp.API
             var key = Encoding.ASCII.GetBytes(Configuration.GetSection("Appsetings:Token").Value);
             services.AddDbContext<DataContext>(x => x.UseSqlite(Configuration.GetConnectionString("DefaultConnection")));
             services.AddTransient<Seed>();
-            services.AddMvc().AddJsonOptions(o=>{
+            services.AddMvc().AddJsonOptions(o =>
+            {
                 o.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
             });
             services.AddCors();
@@ -73,7 +74,8 @@ namespace DatingApp.API
                         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
                         var err = context.Features.Get<IExceptionHandlerFeature>();
-                        if (err !=null){
+                        if (err != null)
+                        {
                             context.Response.AddApplicationError(err.Error.Message);
                             await context.Response.WriteAsync(err.Error.Message);
                         }
