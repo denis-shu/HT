@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using DatingApp.API.Data;
 using DatingApp.API.DTOS;
+using DatingApp.API.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,6 +43,7 @@ namespace DatingApp.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [FilterModelState]
         public async Task<IActionResult> UpdateUser(int id, [FromBody]UserUpdateDTO userUpdate)
         {
             if (!ModelState.IsValid)
