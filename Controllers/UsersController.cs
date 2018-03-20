@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace DatingApp.API.Controllers
 {
     [Authorize]
+    [ServiceFilter(typeof(LogUserActivity))]
     [Route("api/[controller]")]
     public class UsersController : Controller
     {
@@ -26,14 +27,24 @@ namespace DatingApp.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUsers()
+        public async Task<IActionResult> GetUsers(UserParams userParams)
         {
-            var users = await _repo.GetUsers();
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+
+            var userFromRepo = await _repo.GetUser(currentUserId);
+
+            userParams.UserId=currentUserId;
+
+            var users = await _repo.GetUsers(userParams);
+
             var usersToRet = _mapper.Map<IEnumerable<UserForListDTO>>(users);
+            
+            Response.AddPagination(users.CurrentPage, users.PageSize, users.TotalCount, users.TotalPages);
+
             return Ok(usersToRet);
         }
 
-        [HttpGet("{id}", Name ="GetUser")]
+        [HttpGet("{id}", Name = "GetUser")]
         public async Task<IActionResult> GetUser(int id)
         {
             var user = await _repo.GetUser(id);
