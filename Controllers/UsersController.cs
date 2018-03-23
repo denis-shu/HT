@@ -7,13 +7,14 @@ using AutoMapper;
 using DatingApp.API.Data;
 using DatingApp.API.DTOS;
 using DatingApp.API.Helpers;
+using DatingApp.API.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DatingApp.API.Controllers
 {
     [Authorize]
-    [ServiceFilter(typeof(LogUserActivity))]
+   [ServiceFilter(typeof(LogUserActivity))]
     [Route("api/[controller]")]
     public class UsersController : Controller
     {
@@ -33,12 +34,18 @@ namespace DatingApp.API.Controllers
 
             var userFromRepo = await _repo.GetUser(currentUserId);
 
-            userParams.UserId=currentUserId;
+            userParams.UserId = currentUserId;
+
+            if (string.IsNullOrEmpty(userParams.Gender))
+            {
+                userParams.Gender = userFromRepo.Gender == "male" ? "male" : "female";
+            }
+
 
             var users = await _repo.GetUsers(userParams);
 
             var usersToRet = _mapper.Map<IEnumerable<UserForListDTO>>(users);
-            
+
             Response.AddPagination(users.CurrentPage, users.PageSize, users.TotalCount, users.TotalPages);
 
             return Ok(usersToRet);
@@ -76,6 +83,36 @@ namespace DatingApp.API.Controllers
                 return NoContent();
 
             throw new Exception($"updating user {id} was failed");
+        }
+
+        [HttpPost("{id}/like/{recipientId}")]
+        public async Task<IActionResult> LikeUser(int id, int recipientId)
+        {
+
+            if (id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+                return Unauthorized();
+
+            var like = await  _repo.GetLike(id, recipientId);
+
+            if (like != null)
+                return BadRequest("Already like this p of s");
+
+            if (await _repo.GetUser(recipientId) == null)
+                return NotFound("ddd");
+
+            like = new Like
+            {
+                LikerId = id,
+                LikeeId = recipientId
+            };
+
+            _repo.Add<Like>(like);
+
+            if (await _repo.SaveAll())
+                return Ok();
+
+            return BadRequest("Faied to add user");
+
         }
     }
 }

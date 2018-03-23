@@ -36,12 +36,23 @@ namespace DatingApp.API
             var key = Encoding.ASCII.GetBytes(Configuration.GetSection("Appsetings:Token").Value);
             services.AddDbContext<DataContext>(x => x.UseSqlite(Configuration.GetConnectionString("DefaultConnection")));
             services.AddTransient<Seed>();
+            services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAll",
+            builder =>
+            {
+                builder
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
+            });
+    });
             services.AddMvc().AddJsonOptions(o =>
             {
                 o.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
             });
             services.AddScoped<LogUserActivity>();
-            services.AddCors();
             services.Configure<CloudinarySettings>(Configuration.GetSection("CloudinarySettings"));
             services.AddAutoMapper();
             services.AddScoped<IAuthRepositoty, AuthRepository>();
@@ -83,9 +94,8 @@ namespace DatingApp.API
                         }
                     });
                 });
-            }
-            //seeder.SeedUsers();
-            app.UseCors(a => a.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin().AllowCredentials());
+            }            
+            app.UseCors("AllowAll");
             app.UseAuthentication();
             app.UseMvc();
         }
