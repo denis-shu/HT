@@ -12,9 +12,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DatingApp.API.Controllers
 {
-    [Authorize]
+    //[Authorize]
     [ServiceFilter(typeof(LogUserActivity))]
-    [Route("api/users/{userId}/[controller]")]
+    [Route("api/users/{userId}/message")]
     public class MessageContoller : Controller
     {
         private readonly IDatingRepository _repo;
@@ -47,12 +47,12 @@ namespace DatingApp.API.Controllers
             if (userId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
                 return Unauthorized();
 
-            var messagesFromRepo = await _repo.GetMEssageForUser(messageParams);
+            var messagesFromRepo = await _repo.GetMessageForUser(messageParams);
 
             var messages = _mapper.Map<IEnumerable<MessageToReternDTO>>(messagesFromRepo);
 
-            Response.AddPagination(messagesFromRepo.CurrentPage, messagesFromRepo.PageSize
-            , messagesFromRepo.TotalCount, messagesFromRepo.TotalPages);
+            Response.AddPagination(messagesFromRepo.CurrentPage, messagesFromRepo.PageSize,
+             messagesFromRepo.TotalCount, messagesFromRepo.TotalPages);
 
             return Ok(messages);
         }
@@ -67,6 +67,7 @@ namespace DatingApp.API.Controllers
             messageForCreationDto.SenderId = userId;
 
             var recipient = await _repo.GetUser(messageForCreationDto.RecipientId);
+            var sender = await _repo.GetUser(messageForCreationDto.SenderId);
 
             if (recipient == null)
                 return BadRequest("User not found...");
@@ -75,7 +76,7 @@ namespace DatingApp.API.Controllers
 
             _repo.Add(message);
 
-            var messageToReturn = _mapper.Map<MessageForCreationDTO>(message);
+            var messageToReturn = _mapper.Map<MessageToReternDTO>(message);
 
             if (await _repo.SaveAll())
                 return CreatedAtRoute("GetMessage", new { id = message.Id }, message);
@@ -83,8 +84,32 @@ namespace DatingApp.API.Controllers
             throw new Exception("Creating message failed");
         }
 
+        [HttpPost("{id}")]
+        public async Task<IActionResult> DeleteMessage(int id, int userId)
+        {
+            if (userId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+                return Unauthorized();
+
+            var messageFromRepo = await _repo.GetMessage(id);
+
+            if (messageFromRepo.SenderId == userId)
+                messageFromRepo.SenderDeleted = true;
+
+            if (messageFromRepo.RecipientId == userId)
+                messageFromRepo.RecipientDeleted = true;
+
+            if (messageFromRepo.RecipientDeleted && messageFromRepo.SenderDeleted)
+                _repo.Delete(messageFromRepo);
+
+            if (await _repo.SaveAll())
+                return NoContent();
+
+            throw new Exception("Error deleting");
+        }
+
+
         [HttpGet("thread/{id}")]
-        public async Task<IActionResult> GetMEssageThread(int userId, int id)
+        public async Task<IActionResult> GetMessageThread(int userId, int id)
         {
             if (userId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
                 return Unauthorized();
@@ -94,6 +119,27 @@ namespace DatingApp.API.Controllers
             var messThread = _mapper.Map<IEnumerable<MessageToReternDTO>>(messageFromRepo);
 
             return Ok(messThread);
+        }
+
+
+        [HttpPost("{id}/read")]
+        public async Task<IActionResult> MarkMessagesAsRead(int userId, int id)
+        {
+            if (userId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+                return Unauthorized();
+
+            var message = await _repo.GetMessage(id);
+
+            if (message.RecipientId != userId)
+            {
+                return BadRequest("Failed to mark 'read'");
+            }
+
+            message.IsRead = true;
+            message.DateRead = DateTime.Now;
+
+            await _repo.SaveAll();
+            return NoContent();
         }
     }
 }
