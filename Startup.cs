@@ -97,10 +97,18 @@ namespace DatingApp.API
                         }
                     });
                 });
-            }            
+            }
             app.UseCors("AllowAll");
             app.UseAuthentication();
-            app.UseMvc();
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+            app.UseMvc(routes =>
+            {
+                routes.MapSpaFallbackRoute(
+                    name: "spa",
+                    defaults: new { controller = "spa", action = "index" }
+                );
+            });
         }
     }
 }
